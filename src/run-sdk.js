@@ -130,9 +130,9 @@ function disable(allowed, elem) {
 function hide(allowed, elem) {
   console.debug("hiding:", elem, !allowed)
   if (allowed) {
-    elem.classList.remove('hidden');
+    elem.removeAttribute("hidden");
   } else {
-    elem.classList.add('hidden');
+    elem.setAttribute("hidden", "true");
   }
 }
 
