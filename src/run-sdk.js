@@ -1,3 +1,21 @@
+export class StyraRunError extends Error {
+  constructor(message, query = undefined, cause = undefined) {
+    super(message)
+    this.name = "StyraRunError"
+    this.query = query
+    this.cause = cause
+  }
+}
+
+export class StyraRunHttpError extends Error {
+  constructor(message, statusCode, body) {
+    super(message)
+    this.name = "StyraRunHttpError"
+    this.statusCode = statusCode
+    this.body = body
+  }
+}
+
 export class Client {
   url
   callbacks
@@ -16,35 +34,24 @@ export class Client {
   }
 
   /**
-   * Makes an authorization check against a policy rule identified by `'info'`.
+   * Makes an authorization check against a policy rule identified by `'query'`.
    *
-   * The `'info'` dictionary has the following properties:
+   * The `'query'` dictionary has the following properties:
    *
    * * `path`: (string) the path to the policy rule to query. Ignored if `'check'` is also provided
    * * `check`: (string) the name of a registered named check function
    * * `input`: (dictionary) the input document for the query
    *
-   * @param info
+   * @param query
    * @returns {Promise<Response>}
    */
-  check(info) {
-    console.debug("Checking:", info);
-    return fetch(this.url,
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        dataType: 'json',
-        body: JSON.stringify(info)
-      })
-      .then(resp => {
-        if (resp.status !== 200) {
-          return Promise.reject(resp)
-        }
-        return resp.json()
-      });
+  async check(query) {
+    console.debug("Checking:", query);
+    try {
+      return await postJson(this.url, query)
+    } catch (err) {
+      throw new StyraRunError('Check failed', query, err)
+    }
   }
 
   /**
@@ -69,10 +76,8 @@ export class Client {
    */
   refresh(root = document) {
     console.debug("Applying authorization")
-    let elements = root.querySelectorAll('[authz]')
-    elements.forEach((elem) => {
-      console.debug("authz elem:", elem)
-
+    let elements = Array.from(root.querySelectorAll('[authz]'))
+    const checks = elements.map(async (elem) => {
       let authz_attr = elem.getAttribute("authz")
       let authz_info
       try {
@@ -82,18 +87,38 @@ export class Client {
         authz_info = findFunction(authz_attr, this.callbacks)(elem)
       }
 
-      this.check(authz_info)
-        .then(result => {
-          console.debug("authz result:", elem, result)
-          let allowed = result.result === true
-          handle(allowed, elem, this.callbacks)
-        })
-        .catch((e) => {
-          console.warn("Authz check failed", e)
-          handle(false, elem, this.callbacks)
-        });
+      try {
+        const result = await this.check(authz_info)
+        console.debug("authz result:", elem, result)
+        let allowed = result.result === true
+        handle(allowed, elem, this.callbacks)
+      } catch (err) {
+        console.warn("Authz check failed", err)
+        handle(false, elem, this.callbacks)
+      }
     });
+
+    return Promise.all(checks);
   }
+}
+
+async function postJson(url, data) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    dataType: 'json',
+    body: JSON.stringify(data)
+  })
+
+  if (response.status !== 200) {
+    throw new StyraRunHttpError(`Unexpected status code: ${response.status}`, 
+      response.status, response.text())
+  }
+
+  return await response.json()
 }
 
 function findFunction(name, callbacks) {
