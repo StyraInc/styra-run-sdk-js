@@ -176,7 +176,42 @@ function New(url, options = {}) {
   return new Client(url, options);
 }
 
+//
+// Default client and convenience functions
+//
+
+/**
+ * A default {@link Client}, pointed to `/authz`, with no registered callback functions.
+ * @see {@link Client}
+ */
+export const defaultClient = New('/authz')
+
+/**
+ * Calls {@link Client#check} on the default client.
+ * 
+ * @param {*} info 
+ * @returns 
+ * @see {@link Client#check}
+ * @see {@link defaultClient}
+ */
+function check(info) {
+  return defaultClient.check(info);
+}
+
+/**
+ * Calls {@link Client#refresh} on the default client.
+ * 
+ * @param {*} root 
+ * @see {@link Client#refresh}
+ * @see {@link defaultClient}
+ */
+function refresh(root = document) {
+  return defaultClient.refresh(root);
+}
+
 export default {
-  New
+  New,
+  check,
+  refresh
 }
 
