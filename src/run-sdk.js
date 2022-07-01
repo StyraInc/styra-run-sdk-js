@@ -137,12 +137,12 @@ function hide(allowed, elem) {
 }
 
 /**
- * Construct a new Oz Client from the passed `'options'` dictionary.
+ * Construct a new `Styra Run` Client from the passed `'options'` dictionary.
  * Valid options are:
  *
  * * `callbacks`: (dictionary) a name-to-function mapping of `'authz'`- and `'on-authz'` html property callbacks
  *
- * @param url the location of the Oz API
+ * @param url the location of the `Styra Run` API
  * @param options
  * @returns {Client}
  * @constructor
