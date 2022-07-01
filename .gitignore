@@ -2,5 +2,6 @@
 /node_modules/
 /.idea/
 /.run/
+/dist/
 /*.iml
 .DS_Store

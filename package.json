@@ -4,6 +4,7 @@
   "description": "The Styra Run js SDK",
   "main": "./src/index.js",
   "scripts": {
+    "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,5 +23,9 @@
   "bugs": {
     "url": "https://github.com/StyraInc/styra-run-sdk-js/issues"
   },
-  "homepage": "https://github.com/StyraInc/styra-run-sdk-js#readme"
+  "homepage": "https://github.com/StyraInc/styra-run-sdk-js#readme",
+  "devDependencies": {
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0"
+  }
 }
