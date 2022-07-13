@@ -34,23 +34,44 @@ export class Client {
   }
 
   /**
-   * Makes an authorization check against a policy rule identified by `'query'`.
+   * Makes an authorization check against a policy rule identified by `query`.
    *
-   * The `'query'` dictionary has the following properties:
+   * The `query` dictionary has the following properties:
    *
-   * * `path`: (string) the path to the policy rule to query. Ignored if `'check'` is also provided
-   * * `check`: (string) the name of a registered named check function
+   * * `path`: (string) the path to the policy rule to query.
    * * `input`: (dictionary) the input document for the query
    *
    * @param query
    * @returns {Promise<Response>}
    */
   async check(query) {
-    console.debug("Checking:", query);
+   const result = await this.batchedCheck([query])
+   return result[0]
+  }
+
+    /**
+   * Makes multiple authorization checks against a set of policy rules identified by `queries`.
+   *
+   * `queries` is a list of dictionaries that have the following properties:
+   *
+   * * `path`: (string) the path to the policy rule to query.
+   * * `input`: (dictionary) the input document for the query
+   * 
+   * Returns a `Promise` that resolves to a list of query responses, equal in size of `queries`. 
+   * Each entry in the list corresponds to the response to the query at the same position in `queries`.
+   *
+   * @param queries
+   * @returns {Promise<Response[]>}
+   */
+  async batchedCheck(queries) {
+    if (!Array.isArray(queries)) {
+      throw new Error("'queries' is not a valid array")
+    }
+    console.debug("Checking:", queries);
     try {
-      return await postJson(this.url, query)
+      return await postJson(this.url, queries)
     } catch (err) {
-      throw new StyraRunError('Check failed', query, err)
+      throw new StyraRunError('Check failed', queries, err)
     }
   }
 
@@ -68,14 +89,10 @@ export class Client {
   refresh(root = document) {
     console.debug("Applying authorization")
     let elements = Array.from(root.querySelectorAll('[authz]'))
-    const checks = elements.map(async (elem) => {
-      const query = {}
 
-      let authz = elem.getAttribute("authz")
-      if (authz.charAt(0) === '/') {
-        query.path = authz
-      } else {
-        query.check = authz
+    const queries = elements.map((elem) => {
+      const query = {
+        path: elem.getAttribute("authz")
       }
 
       let input
@@ -99,17 +116,21 @@ export class Client {
         query.input = input
       }
 
-      try {
-        const result = await this.check(query)
-        console.debug("authz result:", elem, result)
-        handle(result, elem, this.callbacks)
-      } catch (err) {
-        console.warn("Authz check failed", err)
-        handle(undefined, elem, this.callbacks)
-      }
+      return query
     });
 
-    return Promise.all(checks);
+    return this.batchedCheck(queries)
+      .then((decisions) => Promise.all(decisions
+        .map((decision, i) => {
+          const elem = elements[i]
+          try {
+            console.debug("authz result:", elem, decision)
+            handle(decision, elem, this.callbacks)
+          } catch (err) {
+            console.warn("Authz check failed", err)
+            handle(undefined, elem, this.callbacks)
+          }
+        })))
   }
 }
 
