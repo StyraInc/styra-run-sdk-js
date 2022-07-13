@@ -46,11 +46,19 @@ export class Client {
    * @returns {Promise<Response>}
    */
   async check(query) {
-    console.debug("Checking:", query);
+   const result = await this.batchedCheck([query])
+   return result[0]
+  }
+
+  async batchedCheck(queries) {
+    if (!Array.isArray(queries)) {
+      throw new Error("'queries' is not a valid array")
+    }
+    console.debug("Checking:", queries);
     try {
-      return await postJson(this.url, query)
+      return await postJson(this.url, queries)
     } catch (err) {
-      throw new StyraRunError('Check failed', query, err)
+      throw new StyraRunError('Check failed', queries, err)
     }
   }
 
@@ -69,13 +77,8 @@ export class Client {
     console.debug("Applying authorization")
     let elements = Array.from(root.querySelectorAll('[authz]'))
     const checks = elements.map(async (elem) => {
-      const query = {}
-
-      let authz = elem.getAttribute("authz")
-      if (authz.charAt(0) === '/') {
-        query.path = authz
-      } else {
-        query.check = authz
+      const query = {
+        path: elem.getAttribute("authz")
       }
 
       let input
