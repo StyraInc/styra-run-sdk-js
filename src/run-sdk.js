@@ -19,10 +19,12 @@ export class StyraRunHttpError extends Error {
 export class Client {
   url
   callbacks
+  eventListeners
 
-  constructor(url, {callbacks} = {}) {
+  constructor(url, {callbacks = {}, eventListeners = []} = {}) {
     this.url = url
-    this.callbacks = callbacks ?? {}
+    this.callbacks = callbacks
+    this.eventListeners = eventListeners
 
     if (!this.callbacks["disable"]) {
       this.callbacks["disable"] = disable
@@ -31,6 +33,10 @@ export class Client {
     if (!this.callbacks["hide"]) {
       this.callbacks["hide"] = hide
     }
+  }
+
+  async handleEvent(type, info) {
+    this.eventListeners.forEach((listener) => listener(type, info))
   }
 
   /**
@@ -67,10 +73,12 @@ export class Client {
     if (!Array.isArray(queries)) {
       throw new Error("'queries' is not a valid array")
     }
-    console.debug("Checking:", queries);
     try {
-      return await postJson(this.url, queries)
+      const result = await postJson(this.url, queries)
+      this.handleEvent('check', {queries, result})
+      return result
     } catch (err) {
+      this.handleEvent('check', {queries, err})
       throw new StyraRunError('Check failed', queries, err)
     }
   }
@@ -86,8 +94,7 @@ export class Client {
    * @param root the root `Element`, under which to search for `'authz'`- and `'authz:*'` properties. Defaults to
    `document`.
    */
-  refresh(root = document) {
-    console.debug("Applying authorization")
+  async refresh(root = document) {
     let elements = Array.from(root.querySelectorAll('[authz]'))
 
     const queries = elements.map((elem) => {
@@ -117,20 +124,21 @@ export class Client {
       }
 
       return query
-    });
+    })
 
-    return this.batchedCheck(queries)
-      .then((decisions) => Promise.all(decisions
-        .map((decision, i) => {
-          const elem = elements[i]
-          try {
-            console.debug("authz result:", elem, decision)
-            handle(decision, elem, this.callbacks)
-          } catch (err) {
-            console.warn("Authz check failed", err)
-            handle(undefined, elem, this.callbacks)
-          }
-        })))
+    if (queries.length > 0) {
+      const decisions = await this.batchedCheck(queries)
+      await Promise.all(decisions.map((decision, i) => {
+        const elem = elements[i]
+        try {
+          this.handleEvent('authz', {elem, decision})
+          handle(decision, elem, this.callbacks)
+        } catch (err) {
+          this.handleEvent('authz', {elem, decision})
+          handle(undefined, elem, this.callbacks)
+        }
+      }))
+    }
   }
 }
 
@@ -209,13 +217,38 @@ function hide(result, node) {
 }
 
 /**
- * Construct a new `Styra Run` Client from the passed `'options'` dictionary.
+ * @callback EventListenerCallback
+ * @param {string} type a string identifying the type of event
+ * @param {Object} info a collection of event attributes 
+ */
+/**
+ * A callback for generating the `input` document for policy checks for a given document element.
+ * 
+ * @callback InputCallback
+ * @param {Element} element the document element the policy check was made for
+ * @returns {Object} the `input` document for the policy check
+ */
+/**
+ * A callback for handling policy decisions made for a given document element.
+ * 
+ * @callback HandlerCallback
+ * @param {Object} result the result of the policy check
+ * @param {Element} element the document element the policy check was made for
+ */
+/**
+ * A set of options for the `Styra Run` client.
+ *
+ * @typedef {{callbacks: Object.<String, HandlerCallback|InputCallback>, eventListeners: EventListenerCallback}} Options
+ */
+/**
+ * Construct a new `Styra Run` client from the passed `'options'` dictionary.
  * Valid options are:
  *
  * * `callbacks`: (dictionary) a name-to-function mapping of `'authz'`- and `'on-authz'` html property callbacks
+ * * `eventListeners`: a list of callback functions for the various events triggered by the client (useful for e.g. debug logging)
  *
  * @param url the location of the `Styra Run` API
- * @param options
+ * @param {Options} options
  * @returns {Client}
  * @constructor
  */
