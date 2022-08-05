@@ -1,14 +1,14 @@
-import StyraRun, {defaultClient} from "./run-sdk.js"
+import {defaultClient} from "./run-sdk.js"
 
 class RbacManager {
-  constructor(anchor, styraRunClient) {
+  constructor(url, anchor, styraRunClient) {
+    this.url = url
     this.anchor = anchor
     this.styraRunClient = styraRunClient
   }
 
   renderRoleSelector(anchor, roles, user) {
     const select = document.createElement('select')
-    select.setAttribute('authz', '/rbac/manage/allow')
     select.onchange = (e) => {
       this.setBinding(user.username, e.target.value)
     }
@@ -37,7 +37,7 @@ class RbacManager {
   
   async setBinding(user, role) {
     try {
-      await fetch('/api/rbac/user_bindings', {
+      await fetch(this.url + '/user_bindings', {
           method: 'POST',
           headers: {'content-type': 'application/json'},
           body: JSON.stringify({user, role})
@@ -57,9 +57,9 @@ class RbacManager {
   
   async renderRbacManager() {
     const [roles, bindings] = await Promise.all([
-      fetch('/api/rbac/roles')
+      fetch(this.url + '/roles')
         .then((resp) => resp.status == 200 ? resp.json() : []),
-      fetch('/api/rbac/user_bindings')
+      fetch(this.url + '/user_bindings')
         .then((resp) => resp.status == 200 ? resp.json() : {})
     ])
 
@@ -99,11 +99,18 @@ class RbacManager {
 }
 
 
-async function setup(anchorId = 'authz-manage-rbac', styraRunClient = defaultClient) {
+/**
+ * Sets up and attaches an RBAC Management widget to the document.
+ * 
+ * @param {string} url the location of the RBAC Management API
+ * @param {string} anchorId the ID of the document element to append the widget to (defaults to 'authz-manage-rbac')
+ * @param {Client} styraRunClient the Styra Run client to use (defaults to the default Styra Run client)
+ */
+async function setup(url, anchorId = 'authz-manage-rbac', styraRunClient = defaultClient) {
   const anchor = document.getElementById(anchorId)
   
   if (anchor) {
-    const manager = new RbacManager(anchor, styraRunClient)
+    const manager = new RbacManager(url, anchor, styraRunClient)
     await manager.refresh()
   }
 }
