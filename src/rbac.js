@@ -10,10 +10,10 @@ class RbacManager {
   renderRoleSelector(anchor, roles, user) {
     const select = document.createElement('select')
     select.onchange = (e) => {
-      this.setBinding(user.username, e.target.value)
+      this.setBinding(user.id, e.target.value)
     }
   
-    if (user.role === undefined || !roles.includes(user.role)) {
+    if (user.role === undefined || user || !roles.includes(user.role)) {
       const option = document.createElement('option')
       option.setAttribute('disabled', true)
       option.setAttribute('selected', true)
@@ -35,21 +35,21 @@ class RbacManager {
     anchor.appendChild(select)
   }
   
-  async setBinding(user, role) {
+  async setBinding(id, role) {
     try {
       await fetch(this.url + '/user_bindings', {
-          method: 'POST',
+          method: 'PUT',
           headers: {'content-type': 'application/json'},
-          body: JSON.stringify({user, role})
+          body: JSON.stringify([{id, roles: [role]}])
         })
         .then(async (resp) => {
           if (resp.status !== 200) {
             throw new Error(`Unexpected status code ${resp.status}`)
           }
         })
-      this.styraRunClient.handleEvent('rbac-update', {user, role})
+      this.styraRunClient.handleEvent('rbac-update', {id, role})
     } catch (err) {
-      this.styraRunClient.handleEvent('rbac-update', {user, role, err})
+      this.styraRunClient.handleEvent('rbac-update', {id, role, err})
     }
     
     await this.refresh()
@@ -72,18 +72,15 @@ class RbacManager {
       <th>User</th>
       <th>Role</th>`
   
-    Object.keys(bindings)
-      .map((username) => {
-        const role = bindings[username][0]
-        return {username, role}
-      })
-      .forEach((user) => {
-        const row = table.insertRow()
-        const usernameCell = row.insertCell()
-        usernameCell.appendChild(document.createTextNode(user.username))
-        const roleCell = row.insertCell()
-        this.renderRoleSelector(roleCell, roles, user)
-      })
+    bindings.forEach((binding) => {
+      const role = binding.roles !== undefined ? binding.roles[0] : undefined
+      const user = {id: binding.id, role}
+      const row = table.insertRow()
+      const usernameCell = row.insertCell()
+      usernameCell.appendChild(document.createTextNode(user.id))
+      const roleCell = row.insertCell()
+      this.renderRoleSelector(roleCell, roles, user)
+    })
   
     this.anchor.innerHTML = ''
     this.anchor.appendChild(table)
