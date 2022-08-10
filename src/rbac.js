@@ -37,10 +37,10 @@ class RbacManager {
   
   async setBinding(id, role) {
     try {
-      await fetch(this.url + '/user_bindings', {
+      await fetch(`${this.url}/user_bindings/${id}`, {
           method: 'PUT',
           headers: {'content-type': 'application/json'},
-          body: JSON.stringify([{id, roles: [role]}])
+          body: JSON.stringify([role])
         })
         .then(async (resp) => {
           if (resp.status !== 200) {
