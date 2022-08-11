@@ -54,7 +54,7 @@ Setting the `authz:action` attribute to `hide` will toggle the `hidden` attribut
 <script>StyraRun.refresh()</script>
 ```
 
-If no `authz:action` attribute is declared, but the `hidden` attributeis, the `hidden` attribute will be toggled by default:
+If no `authz:action` attribute is declared, but the `hidden` attribute is, the `hidden` attribute will be toggled by default:
 
 ```html
 <form>
@@ -259,3 +259,25 @@ const client = StyraRun.New('/authz', {
     myCustomInput
 })
 ```
+
+## RBAC Management widget
+
+A simple widget can be generated for managing user roles.
+
+```html
+<div id="authz-manage-rbac"></div>
+<script src="/path/to/styra_run.js"></script>
+<script>
+    StyraRun.setupRbacManagement('/api/rbac', 'authz-manage-rbac')
+</script>
+```
+
+The `StyraRun.setupRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
+
+* `url` (mandatory): the base URL for the RBAC management API
+* `anchorId` (optional): the ID of the document element where the widget should be attached. Defaults to `'authz-manage-rbac'`
+* `styraRunClient` (optional): the Styra Run client to use. Defaults to `StyraRun.defaultClient`
+
+and will generate a simple HTML table with a `User` column, containing a user's username as defined by the default Styra Run RBAC model; and a `Role` column, containing a select drop-down with the available roles as it's options. Each row in the table represents an existing user-role binding.
+
+The necessary back-end service for the RBAC management widget can be provided by the [Styra Run Node.js SDK](https://www.npmjs.com/package/styra-run-sdk-node).
