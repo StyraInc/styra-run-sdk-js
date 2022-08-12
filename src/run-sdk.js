@@ -16,6 +16,10 @@ export class StyraRunHttpError extends Error {
   }
 }
 
+export function DEFAULT_PREDICATE(decision) {
+  return decision?.result === true
+}
+
 export class Client {
   url
   callbacks
@@ -47,11 +51,29 @@ export class Client {
    *
    * @param {string} path the path to the policy rule to query
    * @param {*|undefined} input the input document for the query (optional)
-   * @returns {Promise<CheckResult>}
+   * @returns {Promise<CheckResult, StyraRunError>}
    */
   async query(path, input = undefined) {
    const result = await this.batchedQuery([{path, input}])
    return result[0]
+  }
+
+  /**
+   * @callback DecisionPredicate
+   * @param {CheckResult} decision
+   * @returns {Boolean} `true` if `decision` is valid, `false` otherwise
+   */
+  /**
+   * Makes an authorization check against a policy rule specified by `path`.
+   *
+   * @param {string} path the path to the policy rule to query
+   * @param {*|undefined} input the input document for the query (optional)
+   * @param {DecisionPredicate|undefined} predicate a callback function, taking a query response dictionary as arg, returning true/false (optional)
+   * @returns {Promise<boolean, StyraRunError>}
+   */
+  async check(path, input = undefined, predicate = DEFAULT_PREDICATE) {
+    const decission = await this.query(path, input)
+    return await predicate(decission)
   }
 
   /**
@@ -264,15 +286,15 @@ function New(url, options = {}) {
 export const defaultClient = New('/authz')
 
 /**
- * Calls {@link Client#query} on the default client.
+ * Calls {@link Client#check} on the default client.
  * 
  * @param {*} info 
  * @returns 
- * @see {@link Client#query}
+ * @see {@link Client#check}
  * @see {@link defaultClient}
  */
-function query(info) {
-  return defaultClient.query(info);
+function check(info) {
+  return defaultClient.check(info);
 }
 
 /**
@@ -288,7 +310,7 @@ function refresh(root = document) {
 
 export default {
   New,
-  query,
+  check,
   refresh
 }
 
