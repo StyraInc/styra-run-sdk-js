@@ -100,11 +100,12 @@ class RbacManager {
  * Sets up and attaches an RBAC Management widget to the document.
  * 
  * @param {string} url the location of the RBAC Management API
- * @param {string} anchorId the ID of the document element to append the widget to (defaults to 'authz-manage-rbac')
+ * @param {string} nodeSelector the CSS selector string to locate the document element to append the widget to (e.g. '#my-id', '.my-class')
  * @param {Client} styraRunClient the Styra Run client to use (defaults to the default Styra Run client)
+ * @see https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors
  */
-async function setup(url, anchorId = 'authz-manage-rbac', styraRunClient = defaultClient) {
-  const anchor = document.getElementById(anchorId)
+async function setup(url, anchorQuery, styraRunClient = defaultClient) {
+  const anchor = document.querySelector(anchorQuery)
   
   if (anchor) {
     const manager = new RbacManager(url, anchor, styraRunClient)
