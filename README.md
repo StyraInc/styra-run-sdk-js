@@ -191,7 +191,7 @@ When using the [Node.js SDK](https://github.com/StyraInc/styra-run-sdk-node), it
 ### Authz Attributes
 
 * `authz`: if prefixed with a `/`, the path to a policy rule; otherwise assumed to be a named check function registered server-side.
-* `authz:action`: the action to take on a policy decision; either `hide` (toggles the `hidden` attribute), `disable` (toggles the `disabled` attribute), or the name of some global function or a callback registered when the Styra Run Client was constructed. If `authz:action` isn't declared, `hide` is assumed if the html element has the `hidden` attribute; `disable` is assumed otherwise. 
+* `authz:action`: the action to take on a policy decision; either `hide` (toggles the `hidden` attribute), `disable` (toggles the `disabled` attribute), or the name of some global function or a callback registered when the Styra Run Client was constructed. If `authz:action` isn't declared, `hide` is assumed if the html element has the `hidden` attribute; `disable` is assumed otherwise.
 Callbacks take two arguments:
   * `decision`: (dictionary) the result of the queried polizy rule.
   * `node`: the html node that spawned the policy check.
@@ -269,7 +269,7 @@ A simple widget can be generated for managing user roles.
 The `StyraRun.setupRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
 
 * `url` (mandatory): the base URL for the RBAC management API
-* `anchorId` (optional): the ID of the document element where the widget should be attached. Defaults to `'authz-manage-rbac'`
+* `anchorQuery` (mandatory): the [CSS selector string](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors) to locate the document element where the widget should be attached.
 * `styraRunClient` (optional): the Styra Run client to use. Defaults to `StyraRun.defaultClient`
 
 and will generate a simple HTML table with a `User` column, containing a user's username as defined by the default Styra Run RBAC model; and a `Role` column, containing a select drop-down with the available roles as it's options. Each row in the table represents an existing user-role binding.
