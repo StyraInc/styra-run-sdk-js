@@ -16,6 +16,10 @@ export class StyraRunHttpError extends Error {
   }
 }
 
+export function DEFAULT_PREDICATE(decision) {
+  return decision?.result === true
+}
+
 export class Client {
   url
   callbacks
@@ -40,22 +44,42 @@ export class Client {
   }
 
   /**
-   * Makes an authorization check against a policy rule identified by `query`.
-   *
-   * The `query` dictionary has the following properties:
-   *
-   * * `path`: (string) the path to the policy rule to query.
-   * * `input`: (dictionary) the input document for the query
-   *
-   * @param query
-   * @returns {Promise<Response>}
+   * @typedef {{result: *}|{}} CheckResult
    */
-  async check(query) {
-   const result = await this.batchedCheck([query])
+  /**
+   * Makes an authorization query against a policy rule specified by `path`.
+   *
+   * @param {string} path the path to the policy rule to query
+   * @param {*|undefined} input the input document for the query (optional)
+   * @returns {Promise<CheckResult, StyraRunError>}
+   */
+  async query(path, input = undefined) {
+   const result = await this.batchedQuery([{path, input}])
    return result[0]
   }
 
-    /**
+  /**
+   * @callback DecisionPredicate
+   * @param {CheckResult} decision
+   * @returns {Boolean} `true` if `decision` is valid, `false` otherwise
+   */
+  /**
+   * Makes an authorization check against a policy rule specified by `path`.
+   *
+   * @param {string} path the path to the policy rule to query
+   * @param {*|undefined} input the input document for the query (optional)
+   * @param {DecisionPredicate|undefined} predicate a callback function, taking a query response dictionary as arg, returning true/false (optional)
+   * @returns {Promise<boolean, StyraRunError>}
+   */
+  async check(path, input = undefined, predicate = DEFAULT_PREDICATE) {
+    const decission = await this.query(path, input)
+    return await predicate(decission)
+  }
+
+  /**
+   * @typedef {{path: string, input: *}} BatchQuery
+   */
+  /**
    * Makes multiple authorization checks against a set of policy rules identified by `queries`.
    *
    * `queries` is a list of dictionaries that have the following properties:
@@ -66,20 +90,20 @@ export class Client {
    * Returns a `Promise` that resolves to a list of query responses, equal in size of `queries`. 
    * Each entry in the list corresponds to the response to the query at the same position in `queries`.
    *
-   * @param queries
+   * @param {BatchQuery[]} queries the list of queries to batch
    * @returns {Promise<Response[]>}
    */
-  async batchedCheck(queries) {
+  async batchedQuery(queries) {
     if (!Array.isArray(queries)) {
       throw new Error("'queries' is not a valid array")
     }
     try {
       const result = await postJson(this.url, queries)
-      this.handleEvent('check', {queries, result})
+      this.handleEvent('query', {queries, result})
       return result
     } catch (err) {
-      this.handleEvent('check', {queries, err})
-      throw new StyraRunError('Check failed', queries, err)
+      this.handleEvent('query', {queries, err})
+      throw new StyraRunError('Query failed', queries, err)
     }
   }
 
@@ -127,16 +151,11 @@ export class Client {
     })
 
     if (queries.length > 0) {
-      const decisions = await this.batchedCheck(queries)
-      await Promise.all(decisions.map((decision, i) => {
+      const decisions = await this.batchedQuery(queries)
+      await Promise.allSettled(decisions.map(async (decision, i) => {
         const elem = elements[i]
-        try {
-          this.handleEvent('authz', {elem, decision})
-          handle(decision, elem, this.callbacks)
-        } catch (err) {
-          this.handleEvent('authz', {elem, decision})
-          handle(undefined, elem, this.callbacks)
-        }
+        this.handleEvent('authz', {elem, decision})
+        handle(decision, elem, this.callbacks)
       }))
     }
   }
@@ -174,10 +193,10 @@ function findFunction(name, callbacks) {
   throw Error(`Unknown function '${name}'`)
 }
 
-function handle(result, node, callbacks) {
+function handle(decision, node, callbacks) {
   let authzAction = node.getAttribute('authz:action')
   if (authzAction) {
-    findFunction(authzAction, callbacks)(result, node)
+    findFunction(authzAction, callbacks)(decision, node)
   } else {
     // No authz:action has been defined, attempt figuring it out.
     // the attribute might get removed once the inferred action has been applied, so we need to remember the action.
@@ -186,30 +205,30 @@ function handle(result, node, callbacks) {
       // Node has hidden property, assume policy decisions should toggle visibility.
       
       node.setAttribute('authz:action', 'hide')
-      hide(result, node)
+      hide(decision, node)
       return
     } 
 
     // Disable node by default.
     node.setAttribute('authz:action', 'disable')
-    disable(result, node);
+    disable(decision, node);
   }
 }
 
-function isAllowed(result) {
-  return result?.result === true
+function isAllowed(decision) {
+  return decision?.result === true
 }
 
-function disable(result, node) {
-  if (isAllowed(result)) {
+function disable(decision, node) {
+  if (isAllowed(decision)) {
     node.removeAttribute("disabled");
   } else {
     node.setAttribute("disabled", "true");
   }
 }
 
-function hide(result, node) {
-  if (isAllowed(result)) {
+function hide(decision, node) {
+  if (isAllowed(decision)) {
     node.removeAttribute("hidden");
   } else {
     node.setAttribute("hidden", "true");

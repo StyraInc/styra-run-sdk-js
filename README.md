@@ -205,10 +205,7 @@ The default Styra Run Client makes API calls to `/authz`, and has no [registered
 ```javascript
 const input = {...};
 // Query the `foo/bar/allowed` policy rule.
-StyraRun.check({
-    input,
-    path: 'foo/bar/allowed'
-});
+StyraRun.check('foo/bar/allowed', input)
 ```
 
 ```javascript
@@ -224,10 +221,7 @@ When it's necessary to make API calls to another location than `/authz`, or [cal
 const client = StyraRun.New('/authz');
 const input = {...};
 // Query the `foo/bar/allowed` policy rule.
-client.check({
-    input,
-    path: 'foo/bar/allowed'
-});
+client.check('foo/bar/allowed', input)
 ```
 
 ## Registering Callbacks
