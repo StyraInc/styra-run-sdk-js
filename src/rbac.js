@@ -8,31 +8,31 @@ class RbacManager {
   }
 
   renderRoleSelector(anchor, roles, user) {
-    const select = document.createElement('select')
-    select.onchange = (e) => {
-      this.setBinding(user.id, e.target.value)
+    const selectNode = document.createElement('select')
+    selectNode.onchange = (event) => {
+      this.setBinding(user.id, event.target.value)
     }
   
-    if (user.role === undefined || user || !roles.includes(user.role)) {
-      const option = document.createElement('option')
-      option.setAttribute('disabled', true)
-      option.setAttribute('selected', true)
-      option.innerText = user.role ?? ''
-      select.appendChild(option)
+    if (!roles.includes(user?.role)) {
+      const optionNode = document.createElement('option')
+      optionNode.setAttribute('disabled', true)
+      optionNode.setAttribute('selected', true)
+      optionNode.innerText = user.role // user.role should be defined at this point
+      selectNode.appendChild(optionNode)
     }
     
     roles.forEach((role) => {
-      const option = document.createElement('option')
-      option.innerText = role
-      option.setAttribute('value', role)
-      if (user.role === role) {
-        option.setAttribute('selected', true)
+      const optionNode = document.createElement('option')
+      optionNode.innerText = role
+      optionNode.setAttribute('value', role)
+      if (user?.role === role) {
+        optionNode.setAttribute('selected', true)
       }
       
-      select.appendChild(option)
+      selectNode.appendChild(optionNode)
     })
   
-    anchor.appendChild(select)
+    anchor.appendChild(selectNode)
   }
   
   async setBinding(id, role) {
@@ -44,7 +44,8 @@ class RbacManager {
         })
         .then(async (resp) => {
           if (resp.status !== 200) {
-            throw new Error(`Unexpected status code ${resp.status}`)
+            throw new Error(`Unexpected status code ${resp.status}`) // the try catch block will not catch this because it's in a promise
+            // use Promise.catch() to catch this error
           }
         })
       this.styraRunClient.handleEvent('rbac-update', {id, role})
@@ -73,11 +74,13 @@ class RbacManager {
       <th>Role</th>`
   
     bindings.forEach((binding) => {
-      const role = binding.roles !== undefined ? binding.roles[0] : undefined
+      const [role] = binding.roles ?? []
       const user = {id: binding.id, role}
       const row = table.insertRow()
+
       const usernameCell = row.insertCell()
       usernameCell.appendChild(document.createTextNode(user.id))
+
       const roleCell = row.insertCell()
       this.renderRoleSelector(roleCell, roles, user)
     })
@@ -86,7 +89,7 @@ class RbacManager {
     this.anchor.appendChild(table)
   }
 
-  async refresh() {
+  async render() {
     try {
       await this.renderRbacManager()
     } catch (err) {
@@ -94,7 +97,6 @@ class RbacManager {
     }
   }
 }
-
 
 /**
  * Sets up and attaches an RBAC Management widget to the document.
@@ -104,15 +106,16 @@ class RbacManager {
  * @param {Client} styraRunClient the Styra Run client to use (defaults to the default Styra Run client)
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors
  */
-async function setup(url, anchorQuery, styraRunClient = defaultClient) {
+async function create(url, anchorQuery, styraRunClient = defaultClient) {
   const anchor = document.querySelector(anchorQuery)
   
   if (anchor) {
     const manager = new RbacManager(url, anchor, styraRunClient)
-    await manager.refresh()
+    await manager.render()
   }
+  // throw error if no achor?
 }
 
 export default {
-  setup
+  create
 }

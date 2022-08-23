@@ -1,5 +1,5 @@
 export class StyraRunError extends Error {
-  constructor(message, query = undefined, cause = undefined) {
+  constructor(message, query, cause) { // undefined by default if args not passed, unless it's telling you these are optional
     super(message)
     this.name = "StyraRunError"
     this.query = query
@@ -16,6 +16,7 @@ export class StyraRunHttpError extends Error {
   }
 }
 
+// all caps usually represents a constant, but this is a function
 export function DEFAULT_PREDICATE(decision) {
   return decision?.result === true
 }
@@ -30,12 +31,12 @@ export class Client {
     this.callbacks = callbacks
     this.eventListeners = eventListeners
 
-    if (!this.callbacks["disable"]) {
-      this.callbacks["disable"] = disable
+    if (!this.callbacks.disable) {
+      this.callbacks.disable = disable
     }
 
-    if (!this.callbacks["hide"]) {
-      this.callbacks["hide"] = hide
+    if (!this.callbacks.hide) {
+      this.callbacks.hide = hide
     }
   }
 
@@ -72,8 +73,8 @@ export class Client {
    * @returns {Promise<boolean, StyraRunError>}
    */
   async check(path, input = undefined, predicate = DEFAULT_PREDICATE) {
-    const decission = await this.query(path, input)
-    return await predicate(decission)
+    const decision = await this.query(path, input)
+    return predicate(decision)
   }
 
   /**
@@ -82,10 +83,10 @@ export class Client {
   /**
    * Makes multiple authorization checks against a set of policy rules identified by `queries`.
    *
-   * `queries` is a list of dictionaries that have the following properties:
+   * `queries` is a list of objects that have the following properties:
    *
    * * `path`: (string) the path to the policy rule to query.
-   * * `input`: (dictionary) the input document for the query
+   * * `input`: (object) the input document for the query
    * 
    * Returns a `Promise` that resolves to a list of query responses, equal in size of `queries`. 
    * Each entry in the list corresponds to the response to the query at the same position in `queries`.
@@ -100,10 +101,10 @@ export class Client {
     try {
       const result = await postJson(this.url, queries)
       this.handleEvent('query', {queries, result})
-      return result
+      return result  // how does this return a promise? there's an await above
     } catch (err) {
       this.handleEvent('query', {queries, err})
-      throw new StyraRunError('Query failed', queries, err)
+      throw new StyraRunError('Query failed', queries, err) // @returns {Promise<Response[]>, StyraRunError}
     }
   }
 
@@ -111,28 +112,43 @@ export class Client {
    * Searches the provided `'root'` Element for `'authz'`- and `'authz:*'` properties.
    * For each `'authz'` property found, a check request is made; upon completion of which, the `'authz:action'` callback is called.
    *
-   * When looking up for callback functions, the client's callback dictionary is searched first,
+   * When looking up for callback functions, the client's callback object is searched first,
    * after which global functions in the `'window'` are searched by name. If no callback is found, an exception is
    thrown.
    *
    * @param root the root `Element`, under which to search for `'authz'`- and `'authz:*'` properties. Defaults to
    `document`.
    */
-  async refresh(root = document) {
-    let elements = Array.from(root.querySelectorAll('[authz]'))
+  async render(root = document) { // I think "render" is a better name here since it's updating visual elements
 
-    const queries = elements.map((elem) => {
-      const query = {
-        path: elem.getAttribute("authz")
-      }
+    /*
+
+    I might consider making these string constants an "enum" type in JS, example:
+
+    export const AuthzAttribute = {
+      AUTHZ: 'authz',
+      INPUT: 'authz:input',
+      INPUT_FUNC: 'authz:input-func'
+    }
+
+    elem.getAttribute(AuthzAttribute.INPUT_FUNC)
+
+    */
+
+    const nodes = [...root.querySelectorAll('[authz]')]  // querySelectorAll returns `NodeList`
+
+    const queries = nodes.map((elem) => {
+      const query = {path: elem.getAttribute("authz")}
 
       let input
-      let authzInputFunc = elem.getAttribute("authz:input-func")
+      const authzInputFunc = elem.getAttribute("authz:input-func")
+
       if (authzInputFunc) {
         const func = findFunction(authzInputFunc, this.callbacks)
         input = func(elem)
       } else {
-        let authzInput = elem.getAttribute("authz:input")
+        const authzInput = elem.getAttribute("authz:input")
+
         if (authzInput) {
           try {
             // Attempt parsing as JSON
@@ -181,7 +197,7 @@ async function postJson(url, data) {
 }
 
 function findFunction(name, callbacks) {
-  let func = callbacks[name]
+  const func = callbacks[name]
   if (func) {
     return func
   }
@@ -194,7 +210,8 @@ function findFunction(name, callbacks) {
 }
 
 function handle(decision, node, callbacks) {
-  let authzAction = node.getAttribute('authz:action')
+  const authzAction = node.getAttribute('authz:action')
+
   if (authzAction) {
     findFunction(authzAction, callbacks)(decision, node)
   } else {
@@ -203,7 +220,6 @@ function handle(decision, node, callbacks) {
 
     if (node.attributes.hasOwnProperty('hidden')) {
       // Node has hidden property, assume policy decisions should toggle visibility.
-      
       node.setAttribute('authz:action', 'hide')
       hide(decision, node)
       return
@@ -215,6 +231,13 @@ function handle(decision, node, callbacks) {
   }
 }
 
+/*
+duplicate functions?
+
+export function DEFAULT_PREDICATE(decision) {
+  return decision?.result === true
+}
+*/
 function isAllowed(decision) {
   return decision?.result === true
 }
@@ -283,7 +306,7 @@ function New(url, options = {}) {
  * A default {@link Client}, pointed to `/authz`, with no registered callback functions.
  * @see {@link Client}
  */
-export const defaultClient = New('/authz')
+export const defaultClient = New('/authz') // I'm tempted to just call this just "client"
 
 /**
  * Calls {@link Client#check} on the default client.

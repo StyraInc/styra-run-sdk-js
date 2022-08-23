@@ -1,3 +1,4 @@
+// .cjs?  why not just .js? https://webpack.js.org/configuration/
 const path = require('path');
 
 module.exports = {

@@ -11,6 +11,7 @@
 
 ## Policy Checking with HTML Attributes
 
+// will there be a case where it shouldn't have / prepended?
 Note: when querying a policy rule by path, the `authz` HTML attribute value _must_ have a leading '`/`'; e.g. `/foo/bar` is a valid path, whereas `foo/bar` is not.
 
 ### Disabling an HTML Node on Policy Decision
@@ -19,12 +20,11 @@ Setting the `authz:action` attribute to `disable` will toggle the `disabled` att
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:action="disable">
+    <input type="submit" authz="/path/to/policy/rule" authz:action="disable">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>
+    // why don't we just auto call this when page is loaded? https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event
     StyraRun.refresh() // Make a policy decision for all HTML nodes with an `authz` attribute.
 </script>
 ```
@@ -33,8 +33,7 @@ If no `authz:action`- and no `hidden` attributes are declared, the `disabled` at
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule">
+    <input type="submit" authz="/path/to/policy/rule">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>StyraRun.refresh()</script>
@@ -58,9 +57,7 @@ If no `authz:action` attribute is declared, but the `hidden` attribute is, the `
 
 ```html
 <form>
-    <input hidden
-           type="submit"
-           authz="/path/to/policy/rule">
+    <input hidden type="submit" authz="/path/to/policy/rule">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>StyraRun.refresh()</script>
@@ -72,9 +69,12 @@ The `authz:action` attribute can also name a custom global function:
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:action="myCustomAction">
+    // if you must put this in multiple lines, this is usually the format style:
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:action="myCustomAction"
+    >
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>
@@ -138,7 +138,7 @@ An `input` document/value can be specified via `authz:input`:
 <form>
     <input type="submit"
            authz="/path/to/policy/rule"
-           authz:input='{"foo": "bar"}'> <!-- A dictionary -->
+           authz:input='{"foo": "bar"}'> <!-- A object --> // JS terminology for dictionary
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>StyraRun.refresh()</script>
@@ -210,6 +210,7 @@ StyraRun.check('foo/bar/allowed', input)
 
 ```javascript
 // Refresh the policy decision for all HTML nodes with the `authz` attribute.
+// idea: we could probably be smart about this and auto refresh if it detects any new changes to the DOM elements with the `authz` attribute
 StyraRun.refresh();
 ```
 
@@ -262,6 +263,7 @@ A simple widget can be generated for managing user roles.
 <div id="authz-manage-rbac"></div>
 <script src="/path/to/styra_run.js"></script>
 <script>
+    // use the querySelector style arg so '#authz-manage-rbac'
     StyraRun.setupRbacManagement('/api/rbac', 'authz-manage-rbac')
 </script>
 ```
