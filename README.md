@@ -11,21 +11,21 @@
 
 ## Policy Checking with HTML Attributes
 
-// will there be a case where it shouldn't have / prepended?
-Note: when querying a policy rule by path, the `authz` HTML attribute value _must_ have a leading '`/`'; e.g. `/foo/bar` is a valid path, whereas `foo/bar` is not.
-
 ### Disabling an HTML Node on Policy Decision
 
 Setting the `authz:action` attribute to `disable` will toggle the `disabled` attribute on policy decision:
 
 ```html
 <form>
-    <input type="submit" authz="/path/to/policy/rule" authz:action="disable">
+    <input 
+        type="submit" 
+        authz="/path/to/policy/rule" 
+        authz:action="disable">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>
     // why don't we just auto call this when page is loaded? https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event
-    StyraRun.refresh() // Make a policy decision for all HTML nodes with an `authz` attribute.
+    StyraRun.render() // Make a policy decision for all HTML nodes with an `authz` attribute.
 </script>
 ```
 
@@ -36,7 +36,7 @@ If no `authz:action`- and no `hidden` attributes are declared, the `disabled` at
     <input type="submit" authz="/path/to/policy/rule">
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ### Hiding an HTML Node on Policy Decision
@@ -45,22 +45,26 @@ Setting the `authz:action` attribute to `hide` will toggle the `hidden` attribut
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:action="hide">
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:action="hide">
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 If no `authz:action` attribute is declared, but the `hidden` attribute is, the `hidden` attribute will be toggled by default:
 
 ```html
 <form>
-    <input hidden type="submit" authz="/path/to/policy/rule">
+    <input 
+        hidden 
+        type="submit" 
+        authz="/path/to/policy/rule">
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ### Taking a Custom Action on Policy Decision
@@ -69,7 +73,6 @@ The `authz:action` attribute can also name a custom global function:
 
 ```html
 <form>
-    // if you must put this in multiple lines, this is usually the format style:
     <input 
         type="submit"
         authz="/path/to/policy/rule"
@@ -88,7 +91,7 @@ The `authz:action` attribute can also name a custom global function:
         }
     }
 
-    StyraRun.refresh()
+    StyraRun.render()
 </script>
 ```
 
@@ -96,9 +99,10 @@ or a [registered callback](#registering-callbacks):
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:action="myCustomAction">
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:action="myCustomAction">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>
@@ -116,7 +120,7 @@ or a [registered callback](#registering-callbacks):
         myCustomAction
     })
 
-    client.refresh()
+    client.render()
 </script>
 ```
 
@@ -126,41 +130,45 @@ An `input` document/value can be specified via `authz:input`:
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:input="42"> <!-- A primitive -->
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:input="42"> <!-- A primitive -->
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:input='{"foo": "bar"}'> <!-- A object --> // JS terminology for dictionary
+    <input
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:input='{"foo": "bar"}'> <!-- An object -->
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:input='["do", "re", "mi"]'> <!-- An array -->
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+          authz:input='["do", "re", "mi"]'> <!-- An array -->
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 Optionally, `authz:input-func` can be used to specify a global function or [registered callback](#registering-callbacks) that takes the current HTML node, and returns the `input`:
 
 ```html
 <form>
-    <input type="submit"
-           authz="/path/to/policy/rule"
-           authz:input-func="myFunc">
+    <input 
+        type="submit"
+        authz="/path/to/policy/rule"
+        authz:input-func="myFunc">
 </form>
 <script>
     function myFunc(node) {
@@ -171,7 +179,7 @@ Optionally, `authz:input-func` can be used to specify a global function or [regi
     }
 </script>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ### Calling Named Check Functions Registered Server-Side
@@ -180,12 +188,13 @@ When using the [Node.js SDK](https://github.com/StyraInc/styra-run-sdk-node), it
 
 ```html
 <form>
-    <input hidden
-           type="submit"
-           authz="my-named-check-function">
+    <input 
+        hidden
+        type="submit"
+        authz="my-named-check-function">
 </form>
 <script src="/path/to/styra_run.js"></script>
-<script>StyraRun.refresh()</script>
+<script>StyraRun.render()</script>
 ```
 
 ### Authz Attributes
@@ -211,7 +220,7 @@ StyraRun.check('foo/bar/allowed', input)
 ```javascript
 // Refresh the policy decision for all HTML nodes with the `authz` attribute.
 // idea: we could probably be smart about this and auto refresh if it detects any new changes to the DOM elements with the `authz` attribute
-StyraRun.refresh();
+StyraRun.render();
 ```
 
 ## Instantiating a Custom Styra Run Client
@@ -260,15 +269,14 @@ const client = StyraRun.New('/authz', {
 A simple widget can be generated for managing user roles.
 
 ```html
-<div id="authz-manage-rbac"></div>
+<div id="manage-rbac"></div>
 <script src="/path/to/styra_run.js"></script>
 <script>
-    // use the querySelector style arg so '#authz-manage-rbac'
-    StyraRun.setupRbacManagement('/api/rbac', 'authz-manage-rbac')
+    StyraRun.createRbacManagement('/api/rbac', '#manage-rbac')
 </script>
 ```
 
-The `StyraRun.setupRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
+The `StyraRun.screateRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
 
 * `url` (mandatory): the base URL for the RBAC management API
 * `anchorQuery` (mandatory): the [CSS selector string](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors) to locate the document element where the widget should be attached.

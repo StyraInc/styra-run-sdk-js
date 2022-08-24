@@ -16,9 +16,15 @@ export class StyraRunHttpError extends Error {
   }
 }
 
-// all caps usually represents a constant, but this is a function
-export function DEFAULT_PREDICATE(decision) {
+export function defaultPredicate(decision) {
   return decision?.result === true
+}
+
+export const AuthzAttribute = {
+  ACTION: 'authz:action',
+  AUTHZ: 'authz',
+  INPUT: 'authz:input',
+  INPUT_FUNC: 'authz:input-func'
 }
 
 export class Client {
@@ -72,9 +78,9 @@ export class Client {
    * @param {DecisionPredicate|undefined} predicate a callback function, taking a query response dictionary as arg, returning true/false (optional)
    * @returns {Promise<boolean, StyraRunError>}
    */
-  async check(path, input = undefined, predicate = DEFAULT_PREDICATE) {
+  async check(path, input = undefined, predicate = defaultPredicate) {
     const decision = await this.query(path, input)
-    return predicate(decision)
+    return await predicate(decision)
   }
 
   /**
@@ -92,7 +98,7 @@ export class Client {
    * Each entry in the list corresponds to the response to the query at the same position in `queries`.
    *
    * @param {BatchQuery[]} queries the list of queries to batch
-   * @returns {Promise<Response[]>}
+   * @returns {Promise<Response[], StyraRunError>}
    */
   async batchedQuery(queries) {
     if (!Array.isArray(queries)) {
@@ -104,7 +110,7 @@ export class Client {
       return result  // how does this return a promise? there's an await above
     } catch (err) {
       this.handleEvent('query', {queries, err})
-      throw new StyraRunError('Query failed', queries, err) // @returns {Promise<Response[]>, StyraRunError}
+      throw new StyraRunError('Query failed', queries, err)
     }
   }
 
@@ -118,36 +124,22 @@ export class Client {
    *
    * @param root the root `Element`, under which to search for `'authz'`- and `'authz:*'` properties. Defaults to
    `document`.
+   * @returns {Promise<void, StyraRunError>}
    */
-  async render(root = document) { // I think "render" is a better name here since it's updating visual elements
-
-    /*
-
-    I might consider making these string constants an "enum" type in JS, example:
-
-    export const AuthzAttribute = {
-      AUTHZ: 'authz',
-      INPUT: 'authz:input',
-      INPUT_FUNC: 'authz:input-func'
-    }
-
-    elem.getAttribute(AuthzAttribute.INPUT_FUNC)
-
-    */
-
-    const nodes = [...root.querySelectorAll('[authz]')]  // querySelectorAll returns `NodeList`
+  async render(root = document) {
+    const nodes = [...root.querySelectorAll('[authz]')]
 
     const queries = nodes.map((elem) => {
-      const query = {path: elem.getAttribute("authz")}
+      const query = {path: elem.getAttribute(AuthzAttribute.AUTHZ)}
 
       let input
-      const authzInputFunc = elem.getAttribute("authz:input-func")
+      const authzInputFunc = elem.getAttribute(AuthzAttribute.INPUT_FUNC)
 
       if (authzInputFunc) {
         const func = findFunction(authzInputFunc, this.callbacks)
         input = func(elem)
       } else {
-        const authzInput = elem.getAttribute("authz:input")
+        const authzInput = elem.getAttribute(AuthzAttribute.INPUT)
 
         if (authzInput) {
           try {
@@ -169,9 +161,9 @@ export class Client {
     if (queries.length > 0) {
       const decisions = await this.batchedQuery(queries)
       await Promise.allSettled(decisions.map(async (decision, i) => {
-        const elem = elements[i]
-        this.handleEvent('authz', {elem, decision})
-        handle(decision, elem, this.callbacks)
+        const node = nodes[i]
+        this.handleEvent('authz', {node, decision})
+        handle(decision, node, this.callbacks)
       }))
     }
   }
@@ -210,7 +202,7 @@ function findFunction(name, callbacks) {
 }
 
 function handle(decision, node, callbacks) {
-  const authzAction = node.getAttribute('authz:action')
+  const authzAction = node.getAttribute(AuthzAttribute.ACTION)
 
   if (authzAction) {
     findFunction(authzAction, callbacks)(decision, node)
@@ -220,24 +212,17 @@ function handle(decision, node, callbacks) {
 
     if (node.attributes.hasOwnProperty('hidden')) {
       // Node has hidden property, assume policy decisions should toggle visibility.
-      node.setAttribute('authz:action', 'hide')
+      node.setAttribute(AuthzAttribute.ACTION, 'hide')
       hide(decision, node)
       return
     } 
 
     // Disable node by default.
-    node.setAttribute('authz:action', 'disable')
+    node.setAttribute(AuthzAttribute.ACTION, 'disable')
     disable(decision, node);
   }
 }
 
-/*
-duplicate functions?
-
-export function DEFAULT_PREDICATE(decision) {
-  return decision?.result === true
-}
-*/
 function isAllowed(decision) {
   return decision?.result === true
 }
@@ -321,19 +306,19 @@ function check(info) {
 }
 
 /**
- * Calls {@link Client#refresh} on the default client.
+ * Calls {@link Client#render} on the default client.
  * 
  * @param {*} root 
- * @see {@link Client#refresh}
+ * @see {@link Client#render}
  * @see {@link defaultClient}
  */
-function refresh(root = document) {
-  return defaultClient.refresh(root);
+function render(root = document) {
+  return defaultClient.render(root);
 }
 
 export default {
   New,
   check,
-  refresh
+  render
 }
 

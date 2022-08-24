@@ -17,7 +17,7 @@ class RbacManager {
       const optionNode = document.createElement('option')
       optionNode.setAttribute('disabled', true)
       optionNode.setAttribute('selected', true)
-      optionNode.innerText = user.role // user.role should be defined at this point
+      optionNode.innerText = user.role || ''
       selectNode.appendChild(optionNode)
     }
     
@@ -37,23 +37,20 @@ class RbacManager {
   
   async setBinding(id, role) {
     try {
-      await fetch(`${this.url}/user_bindings/${id}`, {
+      const response = await fetch(`${this.url}/user_bindings/${id}`, {
           method: 'PUT',
           headers: {'content-type': 'application/json'},
           body: JSON.stringify([role])
         })
-        .then(async (resp) => {
-          if (resp.status !== 200) {
-            throw new Error(`Unexpected status code ${resp.status}`) // the try catch block will not catch this because it's in a promise
-            // use Promise.catch() to catch this error
-          }
-        })
+      if (response.status !== 200) {
+        throw new Error(`Unexpected status code ${resp.status}`)
+      }
       this.styraRunClient.handleEvent('rbac-update', {id, role})
     } catch (err) {
       this.styraRunClient.handleEvent('rbac-update', {id, role, err})
     }
     
-    await this.refresh()
+    await this.render()
   }
   
   async renderRbacManager() {
@@ -108,12 +105,13 @@ class RbacManager {
  */
 async function create(url, anchorQuery, styraRunClient = defaultClient) {
   const anchor = document.querySelector(anchorQuery)
-  
-  if (anchor) {
-    const manager = new RbacManager(url, anchor, styraRunClient)
-    await manager.render()
+
+  if (!anchor) {
+    throw Error(`No anchor element could be found with selector string '${anchorQuery}'`)
   }
-  // throw error if no achor?
+  
+  const manager = new RbacManager(url, anchor, styraRunClient)
+  await manager.render()
 }
 
 export default {
