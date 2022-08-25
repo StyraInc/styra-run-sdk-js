@@ -1,4 +1,5 @@
-import {defaultClient} from "./run-sdk.js"
+import { defaultClient } from "./run-sdk.js"
+import { StyraRunHttpError } from "./errors.js"
 
 class RbacManager {
   constructor(url, anchor, styraRunClient) {
@@ -43,7 +44,8 @@ class RbacManager {
           body: JSON.stringify([role])
         })
       if (response.status !== 200) {
-        throw new Error(`Unexpected status code ${resp.status}`)
+        throw new StyraRunHttpError(`Unexpected status code ${resp.status}`, 
+          resp.status, response.text())
       }
       this.styraRunClient.handleEvent('rbac-update', {id, role})
     } catch (err) {

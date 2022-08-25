@@ -1,20 +1,4 @@
-export class StyraRunError extends Error {
-  constructor(message, query, cause) { // undefined by default if args not passed, unless it's telling you these are optional
-    super(message)
-    this.name = "StyraRunError"
-    this.query = query
-    this.cause = cause
-  }
-}
-
-export class StyraRunHttpError extends Error {
-  constructor(message, statusCode, body) {
-    super(message)
-    this.name = "StyraRunHttpError"
-    this.statusCode = statusCode
-    this.body = body
-  }
-}
+import { StyraRunError, StyraRunHttpError } from "./errors.js"
 
 export function defaultPredicate(decision) {
   return decision?.result === true
@@ -80,7 +64,7 @@ export class Client {
    */
   async check(path, input = undefined, predicate = defaultPredicate) {
     const decision = await this.query(path, input)
-    return await predicate(decision)
+    return predicate(decision)
   }
 
   /**
@@ -107,10 +91,10 @@ export class Client {
     try {
       const result = await postJson(this.url, queries)
       this.handleEvent('query', {queries, result})
-      return result  // how does this return a promise? there's an await above
+      return result
     } catch (err) {
       this.handleEvent('query', {queries, err})
-      throw new StyraRunError('Query failed', queries, err)
+      throw new StyraRunError('Query failed', err)
     }
   }
 
