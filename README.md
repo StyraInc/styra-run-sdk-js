@@ -272,11 +272,11 @@ A simple widget can be generated for managing user roles.
 <div id="manage-rbac"></div>
 <script src="/path/to/styra_run.js"></script>
 <script>
-    StyraRun.createRbacManagement('/api/rbac', '#manage-rbac')
+    StyraRun.renderRbacManagement('/api/rbac', '#manage-rbac')
 </script>
 ```
 
-The `StyraRun.screateRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
+The `StyraRun.renderRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
 
 * `url` (mandatory): the base URL for the RBAC management API
 * `anchorQuery` (mandatory): the [CSS selector string](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors) to locate the document element where the widget should be attached.

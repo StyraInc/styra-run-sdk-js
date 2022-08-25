@@ -103,7 +103,7 @@ class RbacManager {
  * @param {Client} styraRunClient the Styra Run client to use (defaults to the default Styra Run client)
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors
  */
-async function create(url, anchorQuery, styraRunClient = defaultClient) {
+async function render(url, anchorQuery, styraRunClient = defaultClient) {
   const anchor = document.querySelector(anchorQuery)
 
   if (!anchor) {
@@ -115,5 +115,5 @@ async function create(url, anchorQuery, styraRunClient = defaultClient) {
 }
 
 export default {
-  create
+  render
 }
