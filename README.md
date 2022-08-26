@@ -17,14 +17,13 @@ Setting the `authz:action` attribute to `disable` will toggle the `disabled` att
 
 ```html
 <form>
-    <input 
-        type="submit" 
-        authz="/path/to/policy/rule" 
+    <input
+        type="submit"
+        authz="/path/to/policy/rule"
         authz:action="disable">
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>
-    // why don't we just auto call this when page is loaded? https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event
     StyraRun.render() // Make a policy decision for all HTML nodes with an `authz` attribute.
 </script>
 ```
@@ -45,7 +44,7 @@ Setting the `authz:action` attribute to `hide` will toggle the `hidden` attribut
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
         authz:action="hide">
@@ -58,9 +57,9 @@ If no `authz:action` attribute is declared, but the `hidden` attribute is, the `
 
 ```html
 <form>
-    <input 
-        hidden 
-        type="submit" 
+    <input
+        hidden
+        type="submit"
         authz="/path/to/policy/rule">
 </form>
 <script src="/path/to/styra_run.js"></script>
@@ -73,7 +72,7 @@ The `authz:action` attribute can also name a custom global function:
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
         authz:action="myCustomAction"
@@ -99,7 +98,7 @@ or a [registered callback](#registering-callbacks):
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
         authz:action="myCustomAction">
@@ -130,7 +129,7 @@ An `input` document/value can be specified via `authz:input`:
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
         authz:input="42"> <!-- A primitive -->
@@ -152,7 +151,7 @@ An `input` document/value can be specified via `authz:input`:
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
           authz:input='["do", "re", "mi"]'> <!-- An array -->
@@ -165,7 +164,7 @@ Optionally, `authz:input-func` can be used to specify a global function or [regi
 
 ```html
 <form>
-    <input 
+    <input
         type="submit"
         authz="/path/to/policy/rule"
         authz:input-func="myFunc">
@@ -174,7 +173,7 @@ Optionally, `authz:input-func` can be used to specify a global function or [regi
     function myFunc(node) {
         return {
             id: node.attributes.id,
-            rand: Math.random() 
+            rand: Math.random()
         }
     }
 </script>
@@ -188,7 +187,7 @@ When using the [Node.js SDK](https://github.com/StyraInc/styra-run-sdk-node), it
 
 ```html
 <form>
-    <input 
+    <input
         hidden
         type="submit"
         authz="my-named-check-function">
@@ -219,7 +218,6 @@ StyraRun.check('foo/bar/allowed', input)
 
 ```javascript
 // Refresh the policy decision for all HTML nodes with the `authz` attribute.
-// idea: we could probably be smart about this and auto refresh if it detects any new changes to the DOM elements with the `authz` attribute
 StyraRun.render();
 ```
 
@@ -254,7 +252,7 @@ function myCustomAction(decision, node) {
 function myCustomInput(node) {
     return {
         id: node.attributes.id,
-        rand: Math.random() 
+        rand: Math.random()
     }
 }
 
