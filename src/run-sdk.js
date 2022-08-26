@@ -1,23 +1,14 @@
-export class StyraRunError extends Error {
-  constructor(message, query = undefined, cause = undefined) {
-    super(message)
-    this.name = "StyraRunError"
-    this.query = query
-    this.cause = cause
-  }
-}
+import { StyraRunError, StyraRunHttpError } from "./errors.js"
 
-export class StyraRunHttpError extends Error {
-  constructor(message, statusCode, body) {
-    super(message)
-    this.name = "StyraRunHttpError"
-    this.statusCode = statusCode
-    this.body = body
-  }
-}
-
-export function DEFAULT_PREDICATE(decision) {
+export function defaultPredicate(decision) {
   return decision?.result === true
+}
+
+export const AuthzAttribute = {
+  ACTION: 'authz:action',
+  AUTHZ: 'authz',
+  INPUT: 'authz:input',
+  INPUT_FUNC: 'authz:input-func'
 }
 
 export class Client {
@@ -30,12 +21,12 @@ export class Client {
     this.callbacks = callbacks
     this.eventListeners = eventListeners
 
-    if (!this.callbacks["disable"]) {
-      this.callbacks["disable"] = disable
+    if (!this.callbacks.disable) {
+      this.callbacks.disable = disable
     }
 
-    if (!this.callbacks["hide"]) {
-      this.callbacks["hide"] = hide
+    if (!this.callbacks.hide) {
+      this.callbacks.hide = hide
     }
   }
 
@@ -71,9 +62,9 @@ export class Client {
    * @param {DecisionPredicate|undefined} predicate a callback function, taking a query response dictionary as arg, returning true/false (optional)
    * @returns {Promise<boolean, StyraRunError>}
    */
-  async check(path, input = undefined, predicate = DEFAULT_PREDICATE) {
-    const decission = await this.query(path, input)
-    return await predicate(decission)
+  async check(path, input = undefined, predicate = defaultPredicate) {
+    const decision = await this.query(path, input)
+    return predicate(decision)
   }
 
   /**
@@ -82,16 +73,16 @@ export class Client {
   /**
    * Makes multiple authorization checks against a set of policy rules identified by `queries`.
    *
-   * `queries` is a list of dictionaries that have the following properties:
+   * `queries` is a list of objects that have the following properties:
    *
    * * `path`: (string) the path to the policy rule to query.
-   * * `input`: (dictionary) the input document for the query
+   * * `input`: (object) the input document for the query
    * 
    * Returns a `Promise` that resolves to a list of query responses, equal in size of `queries`. 
    * Each entry in the list corresponds to the response to the query at the same position in `queries`.
    *
    * @param {BatchQuery[]} queries the list of queries to batch
-   * @returns {Promise<Response[]>}
+   * @returns {Promise<Response[], StyraRunError>}
    */
   async batchedQuery(queries) {
     if (!Array.isArray(queries)) {
@@ -103,7 +94,7 @@ export class Client {
       return result
     } catch (err) {
       this.handleEvent('query', {queries, err})
-      throw new StyraRunError('Query failed', queries, err)
+      throw new StyraRunError('Query failed', err)
     }
   }
 
@@ -111,28 +102,29 @@ export class Client {
    * Searches the provided `'root'` Element for `'authz'`- and `'authz:*'` properties.
    * For each `'authz'` property found, a check request is made; upon completion of which, the `'authz:action'` callback is called.
    *
-   * When looking up for callback functions, the client's callback dictionary is searched first,
+   * When looking up for callback functions, the client's callback object is searched first,
    * after which global functions in the `'window'` are searched by name. If no callback is found, an exception is
    thrown.
    *
    * @param root the root `Element`, under which to search for `'authz'`- and `'authz:*'` properties. Defaults to
    `document`.
+   * @returns {Promise<void, StyraRunError>}
    */
-  async refresh(root = document) {
-    let elements = Array.from(root.querySelectorAll('[authz]'))
+  async render(root = document) {
+    const nodes = [...root.querySelectorAll('[authz]')]
 
-    const queries = elements.map((elem) => {
-      const query = {
-        path: elem.getAttribute("authz")
-      }
+    const queries = nodes.map((elem) => {
+      const query = {path: elem.getAttribute(AuthzAttribute.AUTHZ)}
 
       let input
-      let authzInputFunc = elem.getAttribute("authz:input-func")
+      const authzInputFunc = elem.getAttribute(AuthzAttribute.INPUT_FUNC)
+
       if (authzInputFunc) {
         const func = findFunction(authzInputFunc, this.callbacks)
         input = func(elem)
       } else {
-        let authzInput = elem.getAttribute("authz:input")
+        const authzInput = elem.getAttribute(AuthzAttribute.INPUT)
+
         if (authzInput) {
           try {
             // Attempt parsing as JSON
@@ -153,9 +145,9 @@ export class Client {
     if (queries.length > 0) {
       const decisions = await this.batchedQuery(queries)
       await Promise.allSettled(decisions.map(async (decision, i) => {
-        const elem = elements[i]
-        this.handleEvent('authz', {elem, decision})
-        handle(decision, elem, this.callbacks)
+        const node = nodes[i]
+        this.handleEvent('authz', {node, decision})
+        handle(decision, node, this.callbacks)
       }))
     }
   }
@@ -181,7 +173,7 @@ async function postJson(url, data) {
 }
 
 function findFunction(name, callbacks) {
-  let func = callbacks[name]
+  const func = callbacks[name]
   if (func) {
     return func
   }
@@ -194,7 +186,8 @@ function findFunction(name, callbacks) {
 }
 
 function handle(decision, node, callbacks) {
-  let authzAction = node.getAttribute('authz:action')
+  const authzAction = node.getAttribute(AuthzAttribute.ACTION)
+
   if (authzAction) {
     findFunction(authzAction, callbacks)(decision, node)
   } else {
@@ -203,14 +196,13 @@ function handle(decision, node, callbacks) {
 
     if (node.attributes.hasOwnProperty('hidden')) {
       // Node has hidden property, assume policy decisions should toggle visibility.
-      
-      node.setAttribute('authz:action', 'hide')
+      node.setAttribute(AuthzAttribute.ACTION, 'hide')
       hide(decision, node)
       return
     } 
 
     // Disable node by default.
-    node.setAttribute('authz:action', 'disable')
+    node.setAttribute(AuthzAttribute.ACTION, 'disable')
     disable(decision, node);
   }
 }
@@ -283,7 +275,7 @@ function New(url, options = {}) {
  * A default {@link Client}, pointed to `/authz`, with no registered callback functions.
  * @see {@link Client}
  */
-export const defaultClient = New('/authz')
+export const defaultClient = New('/authz') // I'm tempted to just call this just "client"
 
 /**
  * Calls {@link Client#check} on the default client.
@@ -298,19 +290,19 @@ function check(info) {
 }
 
 /**
- * Calls {@link Client#refresh} on the default client.
+ * Calls {@link Client#render} on the default client.
  * 
  * @param {*} root 
- * @see {@link Client#refresh}
+ * @see {@link Client#render}
  * @see {@link defaultClient}
  */
-function refresh(root = document) {
-  return defaultClient.refresh(root);
+function render(root = document) {
+  return defaultClient.render(root);
 }
 
 export default {
   New,
   check,
-  refresh
+  render
 }
 

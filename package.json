@@ -1,7 +1,7 @@
 {
   "name": "styra-run-sdk-js",
   "version": "0.0.1",
-  "description": "The Styra Run js SDK",
+  "description": "Styra Run JavaScript Front-End SDK",
   "main": "./src/index.js",
   "scripts": {
     "build": "webpack",
