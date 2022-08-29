@@ -46,7 +46,7 @@ export class Client {
    */
   async query(path, input = undefined) {
    const result = await this.batchedQuery([{path, input}])
-   return result[0]
+   return result[0]?.check ?? {}
   }
 
   /**
@@ -70,6 +70,11 @@ export class Client {
   /**
    * @typedef {{path: string, input: *}} BatchQuery
    */
+
+  /**
+   * @typedef {{check: {response: *}}} BatchResponse
+   */
+
   /**
    * Makes multiple authorization checks against a set of policy rules identified by `queries`.
    *
@@ -82,16 +87,17 @@ export class Client {
    * Each entry in the list corresponds to the response to the query at the same position in `queries`.
    *
    * @param {BatchQuery[]} queries the list of queries to batch
-   * @returns {Promise<Response[], StyraRunError>}
+   * @param {Object} input the `input` document to apply to all queries that don't have an individual `input` document specified
+   * @returns {Promise<BatchResponse[], StyraRunError>}
    */
-  async batchedQuery(queries) {
+  async batchedQuery(queries, input = undefined) {
     if (!Array.isArray(queries)) {
       throw new Error("'queries' is not a valid array")
     }
     try {
-      const result = await postJson(this.url, queries)
-      this.handleEvent('query', {queries, result})
-      return result
+      const response = await postJson(this.url, {items: queries, input})
+      this.handleEvent('query', {queries, result: response.result})
+      return (response.result ?? [])
     } catch (err) {
       this.handleEvent('query', {queries, err})
       throw new StyraRunError('Query failed', err)
@@ -147,7 +153,7 @@ export class Client {
       await Promise.allSettled(decisions.map(async (decision, i) => {
         const node = nodes[i]
         this.handleEvent('authz', {node, decision})
-        handle(decision, node, this.callbacks)
+        handle(decision.check ?? {}, node, this.callbacks)
       }))
     }
   }
