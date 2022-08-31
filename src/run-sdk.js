@@ -46,7 +46,7 @@ export class Client {
    */
   async query(path, input = undefined) {
    const result = await this.batchedQuery([{path, input}])
-   return result[0]?.check ?? {}
+   return result[0] ?? {}
   }
 
   /**
@@ -153,7 +153,7 @@ export class Client {
       await Promise.allSettled(decisions.map(async (decision, i) => {
         const node = nodes[i]
         this.handleEvent('authz', {node, decision})
-        handle(decision.check ?? {}, node, this.callbacks)
+        handle(decision, node, this.callbacks)
       }))
     }
   }

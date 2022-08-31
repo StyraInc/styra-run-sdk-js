@@ -72,7 +72,7 @@ class RbacManager {
       <th>User</th>
       <th>Role</th>`
   
-    bindings.forEach((binding) => {
+    bindings.result?.forEach((binding) => {
       const [role] = binding.roles ?? []
       const user = {id: binding.id, role}
       const row = table.insertRow()
