@@ -55,37 +55,70 @@ class RbacManager {
     await this.render()
   }
   
-  async renderRbacManager() {
+  async renderRbacManager(pageIndex = 1) {
     const [roles, bindings] = await Promise.all([
       fetch(this.url + '/roles')
         .then((resp) => resp.status == 200 ? resp.json() : []),
-      fetch(this.url + '/user_bindings')
+      fetch(this.url + '/user_bindings?page=' + pageIndex)
         .then((resp) => resp.status == 200 ? resp.json() : {})
     ])
 
     this.styraRunClient.handleEvent('rbac', {roles, bindings})
   
+    const container = document.createElement('div')
+    container.classList.add('rbac')
     const table = document.createElement('table')
+    container.appendChild(table)
   
     const tableHeader = table.insertRow()
     tableHeader.innerHTML = `
       <th>User</th>
       <th>Role</th>`
   
-    bindings.forEach((binding) => {
-      const [role] = binding.roles ?? []
-      const user = {id: binding.id, role}
-      const row = table.insertRow()
-
-      const usernameCell = row.insertCell()
-      usernameCell.appendChild(document.createTextNode(user.id))
-
-      const roleCell = row.insertCell()
-      this.renderRoleSelector(roleCell, roles, user)
-    })
+    if (bindings.result) {
+      bindings.result?.forEach((binding) => {
+        const [role] = binding.roles ?? []
+        const user = {id: binding.id, role}
+        const row = table.insertRow()
   
+        const usernameCell = row.insertCell()
+        usernameCell.appendChild(document.createTextNode(user.id))
+  
+        const roleCell = row.insertCell()
+        this.renderRoleSelector(roleCell, roles, user)
+      })
+  
+      const navigation = document.createElement('div')
+      navigation.classList.add('navigation')
+      container.appendChild(navigation)
+  
+      const page = bindings.page ? bindings.page : {}
+      // Only show navigation buttons if we're on a page index
+      if (page.index) {
+        const previousButton = document.createElement('button')
+        previousButton.innerText = '<'
+        previousButton.onclick = () => this.renderRbacManager(page.index - 1)
+        if (page.index <= 1) {
+          previousButton.setAttribute('disabled', 'true')
+        }
+        navigation.appendChild(previousButton)
+
+        const indexLabel = document.createElement('div')
+        indexLabel.textContent = page.of ? `${page.index}/${page.of}` : `${page.index}`
+        navigation.appendChild(indexLabel)
+    
+        const nextButton = document.createElement('button')
+        nextButton.innerText = '>'
+        nextButton.onclick = () => this.renderRbacManager(page.index + 1)
+        if (bindings.result.length == 0 || (page.of && page.index >= page.of)) {
+          nextButton.setAttribute('disabled', 'true')
+        }
+        navigation.appendChild(nextButton)
+      }
+    }
+    
     this.anchor.innerHTML = ''
-    this.anchor.appendChild(table)
+    this.anchor.appendChild(container)
   }
 
   async render() {
