@@ -95,19 +95,25 @@ class RbacManager {
       const page = bindings.page ? bindings.page : {}
       // Only show navigation buttons if we're on a page index
       if (page.index) {
-        if (page.index > 1) {
-          const previousButton = document.createElement('button')
-          previousButton.innerText = 'Previous'
-          previousButton.onclick = () => this.renderRbacManager(page.index - 1)
-          navigation.appendChild(previousButton)
+        const previousButton = document.createElement('button')
+        previousButton.innerText = '<'
+        previousButton.onclick = () => this.renderRbacManager(page.index - 1)
+        if (page.index <= 1) {
+          previousButton.setAttribute('disabled', 'true')
         }
+        navigation.appendChild(previousButton)
+
+        const indexLabel = document.createElement('div')
+        indexLabel.textContent = page.of ? `${page.index}/${page.of}` : `${page.index}`
+        navigation.appendChild(indexLabel)
     
-        if (bindings.result.length > 0 && (!page.of || page.index < page.of)) {
-          const nextButton = document.createElement('button')
-          nextButton.innerText = 'Next'
-          nextButton.onclick = () => this.renderRbacManager(page.index + 1)
-          navigation.appendChild(nextButton)
+        const nextButton = document.createElement('button')
+        nextButton.innerText = '>'
+        nextButton.onclick = () => this.renderRbacManager(page.index + 1)
+        if (bindings.result.length == 0 || (page.of && page.index >= page.of)) {
+          nextButton.setAttribute('disabled', 'true')
         }
+        navigation.appendChild(nextButton)
       }
     }
     
