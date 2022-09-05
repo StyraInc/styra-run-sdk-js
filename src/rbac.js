@@ -58,7 +58,8 @@ class RbacManager {
   async renderRbacManager(pageIndex = 1) {
     const [roles, bindings] = await Promise.all([
       fetch(this.url + '/roles')
-        .then((resp) => resp.status == 200 ? resp.json() : []),
+        .then((resp) => resp.status == 200 ? resp.json() : {})
+        .then(({result}) => result ?? []),
       fetch(this.url + '/user_bindings?page=' + pageIndex)
         .then((resp) => resp.status == 200 ? resp.json() : {})
     ])
