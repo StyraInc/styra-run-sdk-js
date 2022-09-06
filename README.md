@@ -187,10 +187,7 @@ When using the [Node.js SDK](https://github.com/StyraInc/styra-run-sdk-node), it
 
 ```html
 <form>
-    <input
-        hidden
-        type="submit"
-        authz="my-named-check-function">
+    <input type="submit" authz="my-named-check-function" hidden>
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>StyraRun.render()</script>

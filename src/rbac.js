@@ -2,13 +2,13 @@ import { defaultClient } from "./run-sdk.js"
 import { StyraRunHttpError } from "./errors.js"
 
 class RbacManager {
-  constructor(url, anchor, styraRunClient) {
+  constructor(url, node, styraRunClient) {
     this.url = url
-    this.anchor = anchor
+    this.node = node
     this.styraRunClient = styraRunClient
   }
 
-  renderRoleSelector(anchor, roles, user) {
+  renderRoleSelector(node, roles, user) {
     const selectNode = document.createElement('select')
     selectNode.onchange = (event) => {
       this.setBinding(user.id, event.target.value)
@@ -33,7 +33,7 @@ class RbacManager {
       selectNode.appendChild(optionNode)
     })
   
-    anchor.appendChild(selectNode)
+    node.appendChild(selectNode)
   }
   
   async setBinding(id, role) {
@@ -70,17 +70,23 @@ class RbacManager {
     container.classList.add('rbac')
     const table = document.createElement('table')
     container.appendChild(table)
-  
-    const tableHeader = table.insertRow()
-    tableHeader.innerHTML = `
-      <th>User</th>
-      <th>Role</th>`
+
+    table.innerHTML = `\
+    <thead>
+      <tr>
+          <th>User</th>
+          <th>Role</th>
+      </tr>
+    </thead>`
+
+    const tbody = document.createElement('tbody');
+    table.appendChild(tbody);
   
     if (bindings.result) {
       bindings.result?.forEach((binding) => {
         const [role] = binding.roles ?? []
         const user = {id: binding.id, role}
-        const row = table.insertRow()
+        const row = tbody.insertRow()
   
         const usernameCell = row.insertCell()
         usernameCell.appendChild(document.createTextNode(user.id))
@@ -93,9 +99,9 @@ class RbacManager {
       navigation.classList.add('navigation')
       container.appendChild(navigation)
   
-      const page = bindings.page ? bindings.page : {}
+      const page = bindings.page
       // Only show navigation buttons if we're on a page index
-      if (page.index) {
+      if (page?.index) {
         const previousButton = document.createElement('button')
         previousButton.innerText = '<'
         previousButton.onclick = () => this.renderRbacManager(page.index - 1)
@@ -118,8 +124,8 @@ class RbacManager {
       }
     }
     
-    this.anchor.innerHTML = ''
-    this.anchor.appendChild(container)
+    this.node.innerHTML = ''
+    this.node.appendChild(container)
   }
 
   async render() {
@@ -139,14 +145,14 @@ class RbacManager {
  * @param {Client} styraRunClient the Styra Run client to use (defaults to the default Styra Run client)
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors
  */
-async function render(url, anchorQuery, styraRunClient = defaultClient) {
-  const anchor = document.querySelector(anchorQuery)
+async function render(url, nodeSelector, styraRunClient = defaultClient) {
+  const node = document.querySelector(nodeSelector)
 
-  if (!anchor) {
-    throw Error(`No anchor element could be found with selector string '${anchorQuery}'`)
+  if (!node) {
+    throw Error(`No element could be found with selector string '${nodeSelector}'`)
   }
   
-  const manager = new RbacManager(url, anchor, styraRunClient)
+  const manager = new RbacManager(url, node, styraRunClient)
   await manager.render()
 }
 
