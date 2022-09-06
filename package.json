@@ -1,6 +1,6 @@
 {
   "name": "styra-run-sdk-js",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "Styra Run JavaScript Front-End SDK",
   "main": "./src/index.js",
   "scripts": {
