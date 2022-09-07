@@ -286,13 +286,15 @@ export const defaultClient = New('/authz') // I'm tempted to just call this just
 /**
  * Calls {@link Client#check} on the default client.
  * 
- * @param {*} info 
- * @returns 
+ * @param {string} path the path to the policy rule to query
+ * @param {*|undefined} input the input document for the query (optional)
+ * @param {DecisionPredicate|undefined} predicate a callback function, taking a query response dictionary as arg, returning true/false (optional)
+ * @returns {Promise<boolean, StyraRunError>}
  * @see {@link Client#check}
  * @see {@link defaultClient}
  */
-function check(info) {
-  return defaultClient.check(info);
+function check(path, input = undefined, predicate = defaultPredicate) {
+  return defaultClient.check(path, input, predicate);
 }
 
 /**
