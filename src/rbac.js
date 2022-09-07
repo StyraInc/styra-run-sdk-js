@@ -128,23 +128,11 @@ class RbacManager {
     this.node.appendChild(container)
   }
 
-  renderNotAuthorized() {
-    const container = document.createElement('div')
-    container.textContent = 'You are unauthorized for user role management.'
-    this.anchor.innerHTML = ''
-    this.anchor.appendChild(container)
-  }
-
   async render() {
     try {
-      if (await this.styraRunClient.check('rbac/manage/allow')) {
-        await this.renderRbacManager()
-      } else {
-        await this.renderNotAuthorized()
-      }
+      await this.renderRbacManager()
     } catch (err) {
       this.styraRunClient.handleEvent('rbac', {err})
-      await this.renderNotAuthorized()
     }
   }
 }
