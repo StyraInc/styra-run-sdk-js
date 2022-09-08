@@ -1,16 +1,18 @@
 import { defaultClient } from "./run-sdk.js"
-import { StyraRunHttpError } from "./errors.js"
+import { StyraRunHttpError, UnauthorizedError } from "./errors.js"
 
 class RbacManager {
   constructor(url, node, styraRunClient) {
     this.url = url
     this.node = node
     this.styraRunClient = styraRunClient
+    this.pageIndex = 1
   }
 
   renderRoleSelector(node, roles, user) {
     const selectNode = document.createElement('select')
     selectNode.onchange = (event) => {
+      selectNode.setAttribute('disabled', true)
       this.setBinding(user.id, event.target.value)
     }
   
@@ -52,17 +54,34 @@ class RbacManager {
       this.styraRunClient.handleEvent('rbac-update', {id, role, err})
     }
     
-    await this.render()
+    await this.renderRbacManagerPage(this.pageIndex)
+  }
+
+  async handleResponse(response) {
+    if (response.status === 403) {
+      throw new UnauthorizedError()
+    }
+    return response.status == 200 ? response.json() : {}
   }
   
-  async renderRbacManager(pageIndex = 1) {
+  async renderRbacManagerPage(pageIndex = 1) {
+    this.pageIndex = pageIndex
+
     const [roles, bindings] = await Promise.all([
-      fetch(this.url + '/roles')
-        .then((resp) => resp.status == 200 ? resp.json() : {})
-        .then(({result}) => result ?? []),
-      fetch(this.url + '/user_bindings?page=' + pageIndex)
-        .then((resp) => resp.status == 200 ? resp.json() : {})
-    ])
+        fetch(this.url + '/roles')
+          .then(this.handleResponse)
+          .then(({result}) => result ?? []),
+        fetch(this.url + '/user_bindings?page=' + pageIndex)
+          .then(this.handleResponse)
+      ])
+      .catch(err => {
+        if (err instanceof UnauthorizedError) {
+          this.renderNotAuthorized()
+        } else {
+          this.styraRunClient.handleEvent('rbac', {err})
+          return [{}, {}]
+        }
+      })
 
     this.styraRunClient.handleEvent('rbac', {roles, bindings})
   
@@ -104,7 +123,7 @@ class RbacManager {
       if (page?.index) {
         const previousButton = document.createElement('button')
         previousButton.innerText = '<'
-        previousButton.onclick = () => this.renderRbacManager(page.index - 1)
+        previousButton.onclick = () => this.renderRbacManagerPage(page.index - 1)
         if (page.index <= 1) {
           previousButton.setAttribute('disabled', 'true')
         }
@@ -116,7 +135,7 @@ class RbacManager {
     
         const nextButton = document.createElement('button')
         nextButton.innerText = '>'
-        nextButton.onclick = () => this.renderRbacManager(page.index + 1)
+        nextButton.onclick = () => this.renderRbacManagerPage(page.index + 1)
         if (bindings.result.length == 0 || (page.of && page.index >= page.of)) {
           nextButton.setAttribute('disabled', 'true')
         }
@@ -131,17 +150,13 @@ class RbacManager {
   renderNotAuthorized() {
     const container = document.createElement('div')
     container.textContent = 'You are unauthorized for user role management.'
-    this.anchor.innerHTML = ''
-    this.anchor.appendChild(container)
+    this.node.innerHTML = ''
+    this.node.appendChild(container)
   }
 
   async render() {
     try {
-      if (await this.styraRunClient.check('rbac/manage/allow')) {
-        await this.renderRbacManager()
-      } else {
-        await this.renderNotAuthorized()
-      }
+      await this.renderRbacManagerPage(1)
     } catch (err) {
       this.styraRunClient.handleEvent('rbac', {err})
       await this.renderNotAuthorized()
