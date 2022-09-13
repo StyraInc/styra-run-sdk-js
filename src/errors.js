@@ -14,3 +14,9 @@ export class StyraRunHttpError extends StyraRunError {
     this.body = body
   }
 }
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('Unauthorized')
+  }
+}
