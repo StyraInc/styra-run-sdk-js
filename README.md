@@ -154,7 +154,7 @@ An `input` document/value can be specified via `authz:input`:
     <input
         type="submit"
         authz="/path/to/policy/rule"
-          authz:input='["do", "re", "mi"]'> <!-- An array -->
+        authz:input='["do", "re", "mi"]'> <!-- An array -->
 </form>
 <script src="/path/to/styra_run.js"></script>
 <script>StyraRun.render()</script>
@@ -181,21 +181,9 @@ Optionally, `authz:input-func` can be used to specify a global function or [regi
 <script>StyraRun.render()</script>
 ```
 
-### Calling Named Check Functions Registered Server-Side
+### Authz HTML Tag Attributes
 
-When using the [Node.js SDK](https://github.com/StyraInc/styra-run-sdk-node), it is possible to register named check functions, which can e.g. add session data to the policy query that isn't available to the browser. To call a named check function, simply set the `authz` attribute to its name, without any leading `/`:
-
-```html
-<form>
-    <input type="submit" authz="my-named-check-function" hidden>
-</form>
-<script src="/path/to/styra_run.js"></script>
-<script>StyraRun.render()</script>
-```
-
-### Authz Attributes
-
-* `authz`: if prefixed with a `/`, the path to a policy rule; otherwise assumed to be a named check function registered server-side.
+* `authz`: the path to a policy rule.
 * `authz:action`: the action to take on a policy decision; either `hide` (toggles the `hidden` attribute), `disable` (toggles the `disabled` attribute), or the name of some global function or a callback registered when the Styra Run Client was constructed. If `authz:action` isn't declared, `hide` is assumed if the html element has the `hidden` attribute; `disable` is assumed otherwise.
 Callbacks take two arguments:
   * `decision`: (dictionary) the result of the queried polizy rule.
@@ -259,6 +247,13 @@ const client = StyraRun.New('/authz', {
 })
 ```
 
+```html
+<button 
+    authz="/foo/allow" 
+    authz:action="myCustomAction"
+    authz:.input-func="myCustomInput" />
+```
+
 ## RBAC Management widget
 
 A simple widget can be generated for managing user roles.
@@ -271,10 +266,10 @@ A simple widget can be generated for managing user roles.
 </script>
 ```
 
-The `StyraRun.renderRbacManagement(url, anchorId, styraRunClient)` function takes the following arguments:
+The `StyraRun.renderRbacManagement(url, nodeSelector, styraRunClient)` function takes the following arguments:
 
 * `url` (mandatory): the base URL for the RBAC management API
-* `anchorQuery` (mandatory): the [CSS selector string](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors) to locate the document element where the widget should be attached.
+* `nodeSelector` (mandatory): the [CSS selector string](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Selectors) to locate the document element where the widget should be attached.
 * `styraRunClient` (optional): the Styra Run client to use. Defaults to `StyraRun.defaultClient`
 
 and will generate a simple HTML table with a `User` column, containing a user's username as defined by the default Styra Run RBAC model; and a `Role` column, containing a select drop-down with the available roles as it's options. Each row in the table represents an existing user-role binding.
