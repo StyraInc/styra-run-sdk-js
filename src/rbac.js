@@ -41,13 +41,14 @@ class RbacManager {
   async setBinding(id, role) {
     try {
       const response = await fetch(`${this.url}/user_bindings/${id}`, {
-          method: 'PUT',
-          headers: {'content-type': 'application/json'},
-          body: JSON.stringify([role])
-        })
+        method: 'PUT',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify([role])
+      })
+
       if (response.status !== 200) {
-        throw new StyraRunHttpError(`Unexpected status code ${resp.status}`, 
-          resp.status, response.text())
+        throw new StyraRunHttpError(`Unexpected status code ${response.status}`, 
+          response.status, response.text())
       }
       this.styraRunClient.handleEvent('rbac-update', {id, role})
     } catch (err) {
